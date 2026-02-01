@@ -17,7 +17,7 @@ const RISKY_SKILLS = [
 export function scanSkills(config: OpenClawConfig): Finding[] {
   const findings: Finding[] = [];
 
-  if (!config.skills || config.skills.length === 0) {
+  if (!Array.isArray(config.skills) || config.skills.length === 0) {
     return findings;
   }
 
