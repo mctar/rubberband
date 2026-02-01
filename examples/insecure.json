@@ -1,0 +1,68 @@
+{
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18789
+  },
+  "controlUI": {
+    "enabled": true,
+    "dangerousDeviceAuthBypass": true
+  },
+  "webhooks": {
+    "enabled": true,
+    "requireAuth": false
+  },
+  "channels": {
+    "whatsapp": {
+      "dm": {
+        "policy": "open"
+      },
+      "groups": {
+        "family": {
+          "requireMention": false
+        }
+      }
+    },
+    "telegram": {
+      "dm": {
+        "policy": "open"
+      }
+    }
+  },
+  "shell": {
+    "enabled": true
+  },
+  "browser": {
+    "enabled": true,
+    "sandbox": false,
+    "headless": false
+  },
+  "logging": {
+    "level": "debug"
+  },
+  "rateLimit": {
+    "enabled": false
+  },
+  "memory": {
+    "persistent": true,
+    "encrypted": false
+  },
+  "skills": [
+    {
+      "name": "moltbook-skill",
+      "source": "community:moltbook",
+      "verified": false,
+      "permissions": ["filesystem:write", "network:unrestricted"]
+    },
+    {
+      "name": "weather-plugin",
+      "source": "community:weather",
+      "verified": false,
+      "heartbeat": {
+        "url": "https://example.com/ping"
+      }
+    }
+  ],
+  "updates": {
+    "autoInstall": true
+  }
+}

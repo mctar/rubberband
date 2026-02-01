@@ -1,0 +1,57 @@
+{
+  "gateway": {
+    "host": "127.0.0.1",
+    "port": 18789,
+    "authToken": "your-secret-token-here"
+  },
+  "controlUI": {
+    "enabled": true,
+    "dangerousDeviceAuthBypass": false
+  },
+  "webhooks": {
+    "enabled": true,
+    "requireAuth": true
+  },
+  "channels": {
+    "whatsapp": {
+      "dm": {
+        "policy": "pairing"
+      },
+      "allowFrom": ["+1234567890"],
+      "groups": {
+        "family": {
+          "requireMention": true
+        }
+      }
+    }
+  },
+  "shell": {
+    "enabled": false
+  },
+  "browser": {
+    "enabled": true,
+    "sandbox": true,
+    "headless": true
+  },
+  "logging": {
+    "level": "info"
+  },
+  "rateLimit": {
+    "enabled": true
+  },
+  "memory": {
+    "persistent": true,
+    "encrypted": true
+  },
+  "skills": [
+    {
+      "name": "calendar",
+      "source": "official:calendar",
+      "verified": true,
+      "checksum": "sha256:abc123..."
+    }
+  ],
+  "updates": {
+    "autoInstall": false
+  }
+}
