@@ -44,10 +44,12 @@ rubberband scan
 Output:
 
 ```
-rubberband v0.1.0
+rubberband v0.2.0
+
+OpenClaw: v2026.2.2 (schema: current, source: env)
 
 [CRITICAL] Gateway exposed on 0.0.0.0:18789 without auth
-  → Set gateway.host to 127.0.0.1 or configure auth token
+  → Set gateway.bind to loopback or configure gateway.auth.token
 
 [HIGH] OpenAI API key readable by all users
   → Run: chmod 600 ~/.openclaw/openclaw.json
@@ -72,6 +74,8 @@ Critical: 1 | High: 2 | Medium: 1 | Low: 1
 ```bash
 rubberband scan --json
 ```
+
+JSON output includes OpenClaw version/schema, validation warnings, waived count, and finding paths.
 
 Exit codes:
 - `0` - No critical issues
@@ -98,13 +102,25 @@ Maximum lockdown (disables shell, enables sandbox):
 rubberband harden --strict
 ```
 
+### Generate a fix plan
+
+```bash
+rubberband plan
+```
+
+Include strict-mode fixes in the preview:
+
+```bash
+rubberband plan --strict
+```
+
 ## What it checks
 
 ### Network
-- Gateway binding (0.0.0.0 vs 127.0.0.1)
+- Gateway binding (bind/host)
 - Auth token when exposed
 - Control UI auth bypass
-- Webhook authentication
+- Hooks token authentication
 
 ### Credentials
 - Config file permissions
@@ -130,9 +146,21 @@ rubberband harden --strict
 - Shell execution restrictions
 - Memory encryption
 
+### Approvals
+- Exec approvals file presence
+- Unrestricted exec approval settings
+
+### Web Tools
+- web_fetch redirect limits
+
+### Memory Backend
+- QMD backend availability
+
 ## Configuration
 
-Rubberband looks for OpenClaw config at `~/.openclaw/openclaw.json` by default.
+Rubberband looks for OpenClaw config at `~/.openclaw/openclaw.json` by default and supports
+JSON5 (comments, trailing commas). You can override the state directory with
+`OPENCLAW_STATE_DIR`.
 
 Override with:
 
@@ -144,6 +172,46 @@ Or set the environment variable:
 
 ```bash
 export OPENCLAW_CONFIG_PATH=/path/to/openclaw.json
+```
+
+Override the OpenClaw state directory:
+
+```bash
+export OPENCLAW_STATE_DIR=/path/to/openclaw
+```
+
+OpenClaw version detection order:
+1. `--openclaw-version`
+2. `OPENCLAW_VERSION`
+3. `openclaw --version` (if available)
+4. `version` fields in config (if present)
+5. State directory version files
+6. Local `node_modules/openclaw/package.json`
+
+Skip CLI/state/package version detection:
+
+```bash
+rubberband scan --no-version-detect
+```
+
+### Waivers
+
+Ignore a finding temporarily:
+
+```bash
+rubberband ignore --code NET001 --reason "Internal-only gateway" --days 30
+```
+
+List active waivers:
+
+```bash
+rubberband ignore --list
+```
+
+Remove a waiver:
+
+```bash
+rubberband ignore --remove NET001
 ```
 
 ## Severity Levels

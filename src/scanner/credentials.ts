@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Finding } from '../utils/types.js';
-import { getConfigPath, getStateDirPath, getFilePermissions, fileExists } from '../utils/config.js';
+import type { Finding, ScanContext } from '../utils/types.js';
+import { getFilePermissions, fileExists } from '../utils/config.js';
 
 const API_KEY_PATTERNS = [
   { name: 'OpenAI', pattern: /sk-[a-zA-Z0-9]{48}/ },
@@ -10,10 +10,10 @@ const API_KEY_PATTERNS = [
   { name: 'Slack', pattern: /xox[baprs]-[a-zA-Z0-9-]+/ },
 ];
 
-export function scanCredentials(): Finding[] {
+export function scanCredentials(context: ScanContext): Finding[] {
   const findings: Finding[] = [];
-  const configPath = getConfigPath();
-  const stateDir = getStateDirPath();
+  const configPath = context.paths.configPath;
+  const stateDir = context.paths.stateDir;
 
   // Check config file permissions
   const configPerms = getFilePermissions(configPath);
@@ -25,6 +25,7 @@ export function scanCredentials(): Finding[] {
       detail: `${configPath} has permissions ${configPerms}, should be 600.`,
       recommendation: `Run: chmod 600 ${configPath}`,
       fixable: true,
+      path: configPath,
     });
   }
 
@@ -38,9 +39,10 @@ export function scanCredentials(): Finding[] {
             code: 'CRED002',
             severity: 'high',
             title: `${name} API key found in config`,
-            detail: `Plaintext ${name} API key detected in openclaw.json.`,
+            detail: `Plaintext ${name} API key detected in ${configPath}.`,
             recommendation: 'Use environment variables or a secrets manager instead',
             fixable: false,
+            path: configPath,
           });
         }
       }
@@ -61,6 +63,7 @@ export function scanCredentials(): Finding[] {
         detail: `${envPath} has permissions ${envPerms}, should be 600.`,
         recommendation: `Run: chmod 600 ${envPath}`,
         fixable: true,
+        path: envPath,
       });
     }
   }
@@ -77,6 +80,7 @@ export function scanCredentials(): Finding[] {
         detail: `${stateDir} allows access to other users.`,
         recommendation: `Run: chmod 700 ${stateDir}`,
         fixable: true,
+        path: stateDir,
       });
     }
   }

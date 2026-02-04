@@ -1,8 +1,9 @@
 import chalk from 'chalk';
-import type { Finding, ScanResult, Severity } from '../utils/types.js';
+import type { Finding, ScanResult, Severity, ValidationIssue } from '../utils/types.js';
 import { countBySeverity } from '../scanner/index.js';
+import { formatOpenClawInfo } from '../utils/openclaw.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 const SEVERITY_COLORS: Record<Severity, (text: string) => string> = {
   critical: chalk.bgRed.white.bold,
@@ -20,6 +21,14 @@ const SEVERITY_LABELS: Record<Severity, string> = {
 
 export function reportConsole(result: ScanResult): void {
   console.log(chalk.bold(`\nrubberband v${VERSION}\n`));
+  if (result.openClaw) {
+    console.log(chalk.gray(formatOpenClawInfo(result.openClaw)));
+    console.log();
+  }
+
+  if (result.validation && result.validation.length > 0) {
+    reportValidation(result.validation);
+  }
 
   if (result.findings.length === 0) {
     console.log(chalk.green('No issues found. Your OpenClaw installation looks secure.\n'));
@@ -38,6 +47,22 @@ export function reportConsole(result: ScanResult): void {
   }
 
   printSummary(result);
+}
+
+export function reportValidation(issues: ValidationIssue[]): void {
+  console.log(chalk.bold('Config validation\n'));
+  for (const issue of issues) {
+    const levelLabel = issue.level === 'error' ? chalk.red('ERROR') : chalk.yellow('WARN');
+    const lineInfo = issue.line ? ` (line ${issue.line})` : '';
+    console.log(`${levelLabel} ${issue.message}${lineInfo}`);
+    if (issue.path) {
+      console.log(chalk.gray(`  → ${issue.path}`));
+    }
+    if (issue.recommendation) {
+      console.log(chalk.gray(`  → ${issue.recommendation}`));
+    }
+    console.log();
+  }
 }
 
 function printFinding(finding: Finding): void {
@@ -67,6 +92,10 @@ function printSummary(result: ScanResult): void {
 
   if (parts.length > 0) {
     console.log(parts.join(' | '));
+  }
+
+  if (result.waivedCount && result.waivedCount > 0) {
+    console.log(chalk.gray(`Waived: ${result.waivedCount}`));
   }
 
   console.log(chalk.gray(line));

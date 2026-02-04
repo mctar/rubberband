@@ -7,15 +7,13 @@
     "enabled": true,
     "dangerousDeviceAuthBypass": true
   },
-  "webhooks": {
+  "hooks": {
     "enabled": true,
-    "requireAuth": false
+    "token": ""
   },
   "channels": {
     "whatsapp": {
-      "dm": {
-        "policy": "open"
-      },
+      "dmPolicy": "open",
       "groups": {
         "family": {
           "requireMention": false
@@ -23,9 +21,7 @@
       }
     },
     "telegram": {
-      "dm": {
-        "policy": "open"
-      }
+      "dmPolicy": "open"
     }
   },
   "shell": {

@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, statSync, chmodSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import JSON5 from 'json5';
 import type { OpenClawConfig } from './types.js';
 
 export class ConfigError extends Error {
@@ -17,16 +18,20 @@ export function getConfigPath(): string {
   if (process.env.OPENCLAW_CONFIG_PATH) {
     return process.env.OPENCLAW_CONFIG_PATH;
   }
-  return join(homedir(), '.openclaw', 'openclaw.json');
+  return join(getStateDirPath(), 'openclaw.json');
 }
 
 export function getStateDirPath(): string {
+  if (process.env.OPENCLAW_STATE_DIR) {
+    return process.env.OPENCLAW_STATE_DIR;
+  }
   return join(homedir(), '.openclaw');
 }
 
 export interface LoadConfigResult {
   config: OpenClawConfig | null;
   error: ConfigError | null;
+  raw?: string;
 }
 
 export function loadConfig(configPath?: string): LoadConfigResult {
@@ -34,14 +39,14 @@ export function loadConfig(configPath?: string): LoadConfigResult {
   try {
     const content = readFileSync(path, 'utf-8');
     try {
-      const config = JSON.parse(content) as OpenClawConfig;
+      const config = JSON5.parse(content) as OpenClawConfig;
       if (typeof config !== 'object' || config === null) {
         return {
           config: null,
           error: new ConfigError(`Config file is not a valid JSON object: ${path}`, 'PARSE_ERROR'),
         };
       }
-      return { config, error: null };
+      return { config, error: null, raw: content };
     } catch (parseErr) {
       const message = parseErr instanceof SyntaxError ? parseErr.message : 'Invalid JSON';
       return {

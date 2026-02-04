@@ -1,24 +1,53 @@
 import chalk from 'chalk';
-import type { Finding, OpenClawConfig, HardenOptions, HardenResult } from '../utils/types.js';
-import {
-  saveConfig,
-  getConfigPath,
-  setFilePermissions,
-  getStateDirPath,
-  fileExists,
-} from '../utils/config.js';
+import type {
+  Finding,
+  OpenClawConfig,
+  HardenOptions,
+  HardenResult,
+  ScanContext,
+} from '../utils/types.js';
+import { saveConfig, setFilePermissions, fileExists } from '../utils/config.js';
 import { join } from 'node:path';
 
-type HardenFn = (config: OpenClawConfig, options: HardenOptions) => boolean;
+type HardenFn = (config: OpenClawConfig, options: HardenOptions, context: ScanContext) => boolean;
+type HardenerType = 'config' | 'filesystem';
 
-const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; description: string }> = {
+function setDmPolicy(
+  channel: NonNullable<OpenClawConfig['channels']>[string],
+  context: ScanContext,
+  value: 'open' | 'pairing' | 'allowlist'
+): void {
+  if (context.openClaw.schema === 'legacy') {
+    if (!channel.dm) channel.dm = {};
+    channel.dm.policy = value;
+    return;
+  }
+  if (context.openClaw.schema === 'current') {
+    channel.dmPolicy = value;
+    return;
+  }
+  if (channel.dm?.policy !== undefined) {
+    channel.dm.policy = value;
+  } else {
+    channel.dmPolicy = value;
+  }
+}
+
+const HARDENERS: Record<
+  string,
+  { fn: HardenFn; strictOnly?: boolean; description: string; type: HardenerType }
+> = {
   NET001: {
-    fn: (config) => {
+    fn: (config, _options, context) => {
       if (!config.gateway) config.gateway = {};
       config.gateway.host = '127.0.0.1';
+      if (context.openClaw.schema === 'current' || config.gateway.bind) {
+        config.gateway.bind = 'loopback';
+      }
       return true;
     },
     description: 'Bind gateway to localhost',
+    type: 'config',
   },
   NET003: {
     fn: (config) => {
@@ -27,26 +56,31 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Disable control UI auth bypass',
+    type: 'config',
   },
   NET004: {
-    fn: (config) => {
+    fn: (config, _options, context) => {
+      if (context.openClaw.schema === 'current') {
+        return false;
+      }
       if (!config.webhooks) config.webhooks = {};
       config.webhooks.requireAuth = true;
       return true;
     },
-    description: 'Enable webhook authentication',
+    description: 'Enable webhook authentication (legacy)',
+    type: 'config',
   },
   CRED001: {
-    fn: () => {
-      const configPath = getConfigPath();
-      setFilePermissions(configPath, 0o600);
+    fn: (_config, _options, context) => {
+      setFilePermissions(context.paths.configPath, 0o600);
       return true;
     },
     description: 'Fix config file permissions (chmod 600)',
+    type: 'filesystem',
   },
   CRED003: {
-    fn: () => {
-      const envPath = join(getStateDirPath(), '.env');
+    fn: (_config, _options, context) => {
+      const envPath = join(context.paths.stateDir, '.env');
       if (fileExists(envPath)) {
         setFilePermissions(envPath, 0o600);
         return true;
@@ -54,26 +88,29 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return false;
     },
     description: 'Fix .env file permissions (chmod 600)',
+    type: 'filesystem',
   },
   CRED004: {
-    fn: () => {
-      const stateDir = getStateDirPath();
-      setFilePermissions(stateDir, 0o700);
+    fn: (_config, _options, context) => {
+      setFilePermissions(context.paths.stateDir, 0o700);
       return true;
     },
     description: 'Fix state directory permissions (chmod 700)',
+    type: 'filesystem',
   },
   ACCESS001: {
-    fn: (config) => {
+    fn: (config, _options, context) => {
       if (!config.channels) return false;
       for (const channel of Object.values(config.channels)) {
-        if (channel.dm?.policy === 'open') {
-          channel.dm.policy = 'pairing';
+        const dmPolicy = channel.dmPolicy ?? channel.dm?.policy;
+        if (dmPolicy === 'open') {
+          setDmPolicy(channel, context, 'pairing');
         }
       }
       return true;
     },
     description: 'Set DM policy to pairing',
+    type: 'config',
   },
   ACCESS003: {
     fn: (config) => {
@@ -88,6 +125,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Require mentions in groups',
+    type: 'config',
   },
   RUN001: {
     fn: (config) => {
@@ -96,6 +134,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Set logging level to info',
+    type: 'config',
   },
   RUN003: {
     fn: (config) => {
@@ -104,6 +143,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Enable rate limiting',
+    type: 'config',
   },
   RUN004: {
     fn: (config) => {
@@ -113,6 +153,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
     },
     strictOnly: true,
     description: 'Enable browser sandbox',
+    type: 'config',
   },
   RUN005: {
     fn: (config) => {
@@ -121,6 +162,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Enable headless browser mode',
+    type: 'config',
   },
   RUN006: {
     fn: (config) => {
@@ -130,6 +172,7 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
     },
     strictOnly: true,
     description: 'Disable shell execution',
+    type: 'config',
   },
   RUN008: {
     fn: (config) => {
@@ -138,13 +181,65 @@ const HARDENERS: Record<string, { fn: HardenFn; strictOnly?: boolean; descriptio
       return true;
     },
     description: 'Enable memory encryption',
+    type: 'config',
   },
 };
+
+function cloneConfig(config: OpenClawConfig): OpenClawConfig {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(config);
+  }
+  return JSON.parse(JSON.stringify(config)) as OpenClawConfig;
+}
+
+export function previewConfigChanges(
+  config: OpenClawConfig,
+  findings: Finding[],
+  options: HardenOptions,
+  context: ScanContext
+): { updated: OpenClawConfig; applied: string[]; skipped: string[]; nonConfig: string[] } {
+  const preview = cloneConfig(config);
+  const applied: string[] = [];
+  const skipped: string[] = [];
+  const nonConfig: string[] = [];
+
+  const fixableFindings = findings.filter((f) => f.fixable);
+  for (const finding of fixableFindings) {
+    const hardener = HARDENERS[finding.code];
+    if (!hardener) {
+      skipped.push(`${finding.code}: No automatic fix available`);
+      continue;
+    }
+    if (hardener.strictOnly && !options.strict) {
+      skipped.push(`${finding.code}: Requires --strict mode`);
+      continue;
+    }
+    if (hardener.type !== 'config') {
+      nonConfig.push(`${finding.code}: ${hardener.description}`);
+      continue;
+    }
+    try {
+      const success = hardener.fn(preview, options, context);
+      if (success) {
+        applied.push(`${finding.code}: ${hardener.description}`);
+      } else {
+        skipped.push(`${finding.code}: Condition not met`);
+      }
+    } catch (err) {
+      skipped.push(
+        `${finding.code}: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  return { updated: preview, applied, skipped, nonConfig };
+}
 
 export function harden(
   config: OpenClawConfig,
   findings: Finding[],
-  options: HardenOptions
+  options: HardenOptions,
+  context: ScanContext
 ): HardenResult {
   const result: HardenResult = {
     applied: [],
@@ -173,7 +268,7 @@ export function harden(
     }
 
     try {
-      const success = hardener.fn(config, options);
+      const success = hardener.fn(config, options, context);
       if (success) {
         result.applied.push(`${finding.code}: ${hardener.description}`);
       } else {
@@ -189,7 +284,7 @@ export function harden(
   // Save config changes if not dry run
   if (!options.dryRun && result.applied.length > 0) {
     try {
-      saveConfig(config);
+      saveConfig(config, context.paths.configPath);
     } catch (err) {
       result.errors.push(
         `Failed to save config: ${err instanceof Error ? err.message : 'Unknown error'}`

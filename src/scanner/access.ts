@@ -1,6 +1,7 @@
-import type { Finding, OpenClawConfig } from '../utils/types.js';
+import type { Finding, OpenClawConfig, ScanContext } from '../utils/types.js';
+import { resolveDmPolicy } from '../utils/openclaw.js';
 
-export function scanAccess(config: OpenClawConfig): Finding[] {
+export function scanAccess(config: OpenClawConfig, context: ScanContext): Finding[] {
   const findings: Finding[] = [];
 
   if (!config.channels) {
@@ -9,15 +10,24 @@ export function scanAccess(config: OpenClawConfig): Finding[] {
 
   for (const [channelName, channelConfig] of Object.entries(config.channels)) {
     // Check DM policy
-    const dmPolicy = channelConfig.dm?.policy;
+    const dmPolicy = resolveDmPolicy(channelConfig, context.openClaw.schema);
+    const dmPolicyPath =
+      context.openClaw.schema === 'legacy'
+        ? `channels.${channelName}.dm.policy`
+        : context.openClaw.schema === 'current'
+          ? `channels.${channelName}.dmPolicy`
+          : channelConfig.dm?.policy !== undefined
+            ? `channels.${channelName}.dm.policy`
+            : `channels.${channelName}.dmPolicy`;
     if (dmPolicy === 'open') {
       findings.push({
         code: 'ACCESS001',
         severity: 'high',
         title: `${channelName}: DM policy allows unknown senders`,
-        detail: `Channel ${channelName} has dm.policy set to "open", allowing anyone to send commands.`,
-        recommendation: `Set channels.${channelName}.dm.policy to "pairing" or "allowlist"`,
+        detail: `Channel ${channelName} has a DM policy set to "open", allowing anyone to send commands.`,
+        recommendation: `Set ${dmPolicyPath} to "pairing" or "allowlist"`,
         fixable: true,
+        path: dmPolicyPath,
       });
     }
 
@@ -32,6 +42,7 @@ export function scanAccess(config: OpenClawConfig): Finding[] {
           detail: `Channel ${channelName} has no allowFrom list configured.`,
           recommendation: `Configure channels.${channelName}.allowFrom with trusted identifiers`,
           fixable: false,
+          path: `channels.${channelName}.allowFrom`,
         });
       }
     }
@@ -47,6 +58,7 @@ export function scanAccess(config: OpenClawConfig): Finding[] {
             detail: `Group ${groupName} in ${channelName} does not require @mention, bot responds to all messages.`,
             recommendation: `Set channels.${channelName}.groups.${groupName}.requireMention to true`,
             fixable: true,
+            path: `channels.${channelName}.groups.${groupName}.requireMention`,
           });
         }
       }

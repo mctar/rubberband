@@ -14,6 +14,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: `Logging level is set to "${logLevel}", which may log sensitive data.`,
       recommendation: 'Set logging.level to "info" in production',
       fixable: true,
+      path: 'logging.level',
     });
   }
 
@@ -25,12 +26,13 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       findings.push({
         code: 'RUN002',
         severity: 'medium',
-        title: 'Log file has weak permissions',
-        detail: `Log file ${logFile} has permissions ${logPerms}.`,
-        recommendation: 'Run: chmod 600 ' + logFile,
-        fixable: true,
-      });
-    }
+      title: 'Log file has weak permissions',
+      detail: `Log file ${logFile} has permissions ${logPerms}.`,
+      recommendation: 'Run: chmod 600 ' + logFile,
+      fixable: true,
+      path: 'logging.file',
+    });
+  }
   }
 
   // Check rate limiting
@@ -42,6 +44,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: 'No rate limiting allows resource exhaustion and abuse.',
       recommendation: 'Set rateLimit.enabled to true',
       fixable: true,
+      path: 'rateLimit.enabled',
     });
   }
 
@@ -54,6 +57,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: 'Browser runs without sandboxing, increasing risk of escape.',
       recommendation: 'Set browser.sandbox to true',
       fixable: true,
+      path: 'browser.sandbox',
     });
   }
 
@@ -66,6 +70,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: 'Headed browser mode is typically only needed for debugging.',
       recommendation: 'Set browser.headless to true in production',
       fixable: true,
+      path: 'browser.headless',
     });
   }
 
@@ -76,21 +81,23 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       findings.push({
         code: 'RUN006',
         severity: 'critical',
-        title: 'Shell execution enabled without restrictions',
-        detail: 'Shell access is enabled with no command allowlist.',
-        recommendation: 'Configure shell.allowedCommands or disable shell.enabled',
-        fixable: true,
-      });
-    } else {
-      findings.push({
-        code: 'RUN007',
-        severity: 'medium',
-        title: 'Shell execution enabled',
-        detail: `Shell is enabled with ${allowedCommands.length} allowed commands.`,
-        recommendation: 'Review allowed commands: ' + allowedCommands.join(', '),
-        fixable: false,
-      });
-    }
+      title: 'Shell execution enabled without restrictions',
+      detail: 'Shell access is enabled with no command allowlist.',
+      recommendation: 'Configure shell.allowedCommands or disable shell.enabled',
+      fixable: true,
+      path: 'shell.allowedCommands',
+    });
+  } else {
+    findings.push({
+      code: 'RUN007',
+      severity: 'medium',
+      title: 'Shell execution enabled',
+      detail: `Shell is enabled with ${allowedCommands.length} allowed commands.`,
+      recommendation: 'Review allowed commands: ' + allowedCommands.join(', '),
+      fixable: false,
+      path: 'shell.allowedCommands',
+    });
+  }
   }
 
   // Check memory encryption
@@ -102,6 +109,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: 'Memory is persisted without encryption.',
       recommendation: 'Set memory.encrypted to true',
       fixable: true,
+      path: 'memory.encrypted',
     });
   }
 
@@ -114,6 +122,7 @@ export function scanRuntime(config: OpenClawConfig): Finding[] {
       detail: 'Automatic updates may introduce untested changes.',
       recommendation: 'Consider manual updates for production deployments',
       fixable: false,
+      path: 'updates.autoInstall',
     });
   }
 

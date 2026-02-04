@@ -1,12 +1,26 @@
 import type { ScanResult } from '../utils/types.js';
 import { countBySeverity } from '../scanner/index.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 interface JsonReport {
   version: string;
   timestamp: string;
+  openclaw: {
+    version: string | null;
+    schema: string;
+    source: string;
+  };
+  validation?: Array<{
+    level: string;
+    code: string;
+    message: string;
+    path?: string;
+    line?: number;
+    recommendation?: string;
+  }>;
   score: number;
+  waived?: number;
   summary: {
     critical: number;
     high: number;
@@ -21,6 +35,7 @@ interface JsonReport {
     detail: string;
     recommendation: string;
     fixable: boolean;
+    path?: string;
   }>;
 }
 
@@ -30,7 +45,21 @@ export function reportJson(result: ScanResult): void {
   const report: JsonReport = {
     version: VERSION,
     timestamp: new Date().toISOString(),
+    openclaw: {
+      version: result.openClaw.version?.raw ?? null,
+      schema: result.openClaw.schema,
+      source: result.openClaw.source,
+    },
+    validation: result.validation?.map((issue) => ({
+      level: issue.level,
+      code: issue.code,
+      message: issue.message,
+      path: issue.path,
+      line: issue.line,
+      recommendation: issue.recommendation,
+    })),
     score: result.score,
+    waived: result.waivedCount,
     summary: {
       ...counts,
       total: result.findings.length,
@@ -42,6 +71,7 @@ export function reportJson(result: ScanResult): void {
       detail: f.detail,
       recommendation: f.recommendation,
       fixable: f.fixable ?? false,
+      path: f.path,
     })),
   };
 
