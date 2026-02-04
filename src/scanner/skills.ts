@@ -35,6 +35,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
         detail: `The skill "${skill.name}" is on the known malicious skills list.`,
         recommendation: 'Remove this skill immediately',
         fixable: false,
+        path: 'skills',
       });
       continue;
     }
@@ -48,6 +49,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
         detail: `The skill "${skill.name}" fetches external instructions periodically, which could be used for injection.`,
         recommendation: 'Review this skill carefully or remove it',
         fixable: false,
+        path: 'skills',
       });
     }
 
@@ -78,6 +80,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
         detail: 'Cannot verify skill integrity without checksum.',
         recommendation: 'Add checksum verification for this skill',
         fixable: false,
+        path: 'skills',
       });
     }
   }
@@ -91,6 +94,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
       detail: `Unverified skills: ${unverifiedSkills.join(', ')}`,
       recommendation: 'Review: ' + unverifiedSkills.join(', '),
       fixable: false,
+      path: 'skills',
     });
   }
 
@@ -103,6 +107,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
       detail: `Permissions: ${permissions.join(', ')}`,
       recommendation: 'Review if these permissions are necessary',
       fixable: false,
+      path: 'skills',
     });
   }
 
@@ -115,6 +120,7 @@ export function scanSkills(config: OpenClawConfig): Finding[] {
       detail: `Skills with external heartbeat: ${externalFetchSkills.join(', ')}`,
       recommendation: 'Review heartbeat URLs for safety',
       fixable: false,
+      path: 'skills',
     });
   }
 

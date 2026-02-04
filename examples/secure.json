@@ -2,21 +2,21 @@
   "gateway": {
     "host": "127.0.0.1",
     "port": 18789,
-    "authToken": "your-secret-token-here"
+    "auth": {
+      "token": "your-secret-token-here"
+    }
   },
   "controlUI": {
     "enabled": true,
     "dangerousDeviceAuthBypass": false
   },
-  "webhooks": {
+  "hooks": {
     "enabled": true,
-    "requireAuth": true
+    "token": "your-webhook-token"
   },
   "channels": {
     "whatsapp": {
-      "dm": {
-        "policy": "pairing"
-      },
+      "dmPolicy": "pairing",
       "allowFrom": ["+1234567890"],
       "groups": {
         "family": {

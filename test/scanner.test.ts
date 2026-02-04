@@ -3,12 +3,20 @@ import { runScan, countBySeverity } from '../src/scanner/index.js';
 import type { OpenClawConfig } from '../src/utils/types.js';
 
 describe('runScan', () => {
+  const currentContext = {
+    openClaw: { version: null, schema: 'current', source: 'unknown' },
+    paths: {
+      configPath: '/tmp/rubberband-test-openclaw.json',
+      stateDir: '/tmp/rubberband-test-openclaw',
+    },
+  } as const;
+
   it('returns score of 100 for secure config', () => {
     const config: OpenClawConfig = {
-      gateway: { host: '127.0.0.1', authToken: 'secret' },
+      gateway: { host: '127.0.0.1', auth: { token: 'secret' } },
       rateLimit: { enabled: true },
     };
-    const result = runScan(config);
+    const result = runScan(config, currentContext);
     expect(result.score).toBe(100);
     expect(result.findings).toHaveLength(0);
   });
@@ -18,7 +26,7 @@ describe('runScan', () => {
       gateway: { host: '0.0.0.0' }, // critical: -25
       logging: { level: 'debug' }, // low: -3
     };
-    const result = runScan(config);
+    const result = runScan(config, currentContext);
     expect(result.score).toBe(72); // 100 - 25 - 3
   });
 
@@ -26,24 +34,24 @@ describe('runScan', () => {
     const config: OpenClawConfig = {
       gateway: { host: '0.0.0.0' },
       controlUI: { enabled: true, dangerousDeviceAuthBypass: true },
-      webhooks: { enabled: true, requireAuth: false },
+      hooks: { enabled: true },
       shell: { enabled: true },
       channels: {
-        ch1: { dm: { policy: 'open' } },
-        ch2: { dm: { policy: 'open' } },
+        ch1: { dmPolicy: 'open' },
+        ch2: { dmPolicy: 'open' },
       },
     };
-    const result = runScan(config);
+    const result = runScan(config, currentContext);
     expect(result.score).toBeGreaterThanOrEqual(0);
   });
 
   it('aggregates findings from all scanners', () => {
     const config: OpenClawConfig = {
       gateway: { host: '0.0.0.0' },
-      channels: { test: { dm: { policy: 'open' } } },
+      channels: { test: { dmPolicy: 'open' } },
       logging: { level: 'trace' },
     };
-    const result = runScan(config);
+    const result = runScan(config, currentContext);
     expect(result.findings.length).toBeGreaterThan(1);
 
     const codes = result.findings.map((f) => f.code);
