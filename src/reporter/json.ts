@@ -1,7 +1,7 @@
 import type { ScanResult } from '../utils/types.js';
 import { countBySeverity } from '../scanner/index.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 interface JsonReport {
   version: string;

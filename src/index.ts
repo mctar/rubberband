@@ -9,11 +9,11 @@ import { reportConsole } from './reporter/console.js';
 import { reportJson } from './reporter/json.js';
 import { reportPlan } from './reporter/plan.js';
 import { harden, reportHarden } from './hardener/index.js';
-import type { OpenClawConfig } from './utils/types.js';
+import type { OpenClawConfig, ScanContext } from './utils/types.js';
 import { validateConfig } from './validator/config.js';
 import { addWaiver, loadWaivers, removeWaiver } from './utils/waivers.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 const DEMO_CONFIG: OpenClawConfig = {
   gateway: {
@@ -281,10 +281,10 @@ program
   .option('--list', 'List active waivers')
   .option('--remove <code>', 'Remove waivers by code')
   .action((options) => {
-    const context = {
+    const context: ScanContext = {
       openClaw: { version: null, schema: 'unknown', source: 'unknown' },
       paths: {
-        configPath: options.config || getConfigPath(),
+        configPath: getConfigPath(),
         stateDir: getStateDirPath(),
       },
     };

@@ -44,7 +44,7 @@ rubberband scan
 Output:
 
 ```
-rubberband v0.2.0
+rubberband v0.2.1
 
 OpenClaw: v2026.2.2 (schema: current, source: env)
 

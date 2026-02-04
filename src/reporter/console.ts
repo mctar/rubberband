@@ -3,7 +3,7 @@ import type { Finding, ScanResult, Severity, ValidationIssue } from '../utils/ty
 import { countBySeverity } from '../scanner/index.js';
 import { formatOpenClawInfo } from '../utils/openclaw.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 const SEVERITY_COLORS: Record<Severity, (text: string) => string> = {
   critical: chalk.bgRed.white.bold,
